@@ -14,8 +14,12 @@ def _fetch_batch(symbols: list[str], lookback_days: int, max_retries: int) -> di
     data = None
     for attempt in range(max_retries):
         try:
+            # threads=False: yfinance's own internal HTTP cache is SQLite-backed,
+            # and concurrent threads hitting it on a network-backed filesystem
+            # (e.g. PythonAnywhere's NFS-mounted home directory) intermittently
+            # fail with "database is locked". Serializing is slower but reliable.
             data = yf.download(symbols, start=start, auto_adjust=True,
-                                group_by="ticker", progress=False, threads=True)
+                                group_by="ticker", progress=False, threads=False)
             break
         except Exception:
             if attempt == max_retries - 1:
