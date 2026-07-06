@@ -4,9 +4,15 @@ Fundamentals/RS (Phase 2), stage (Phase 3), VCP (Phase 4), and composite +
 watchlist + settings (Phase 5) are all computed/served now. Nothing is left
 emitting a permanently-null placeholder.
 
-Nightly scans run on their own via app.scheduler -- no manual
-`python -m pipeline.run_nightly` invocation needed once this process is
-deployed and running (see app/scheduler.py for the schedule).
+Two ways the nightly scan can trigger without a manual command:
+1. app.scheduler's in-process APScheduler -- works when this app is served
+   by a real ASGI server (uvicorn on Railway/Fly.io/a VPS). Does NOT fire
+   under the PythonAnywhere WSGI deployment (backend/wsgi.py never invokes
+   the ASGI lifespan protocol at all).
+2. GET /api/admin/run-scan (below) -- a token-protected endpoint an
+   external free scheduler (e.g. cron-job.org) can hit on a schedule. This
+   is the mechanism that actually works on PythonAnywhere's free tier,
+   since both its Scheduled Tasks and Always-on Tasks features are paid-only.
 """
 import json
 import os
@@ -47,6 +53,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/api/admin/run-scan")
+def run_scan(token: str = Query(...)):
+    """Token-protected trigger for an external free scheduler (e.g.
+    cron-job.org) to call on a schedule -- see module docstring. Runs
+    synchronously; a calling client that times out waiting for the
+    response does not stop the scan, it just won't see this request
+    complete (the next /api/meta call will show the fresh result)."""
+    admin_token = os.environ.get("ADMIN_TOKEN")
+    if not admin_token or token != admin_token:
+        raise HTTPException(status_code=403, detail="invalid token")
+
+    from pipeline.run_nightly import run
+
+    run(engine)
+    with engine.connect() as conn:
+        row = conn.execute(text("SELECT last_run, status FROM scan_meta WHERE id = 1")).fetchone()
+    return {"last_run": row[0] if row else None, "status": row[1] if row else "unknown"}
 
 
 @app.get("/api/meta")

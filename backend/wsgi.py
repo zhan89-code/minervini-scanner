@@ -20,6 +20,10 @@ import os
 from http import HTTPStatus
 
 os.environ.setdefault("ALLOWED_ORIGINS", "https://your-frontend.vercel.app")
+# Change this to a real secret (e.g. `python -c "import secrets; print(secrets.token_urlsafe(24))"`)
+# -- whatever external scheduler calls GET /api/admin/run-scan needs this
+# exact value as its `token` query param. Don't reuse the example below.
+os.environ.setdefault("ADMIN_TOKEN", "CHANGE-ME-TO-A-REAL-SECRET")
 
 from api.main import app as _fastapi_app  # noqa: E402
 

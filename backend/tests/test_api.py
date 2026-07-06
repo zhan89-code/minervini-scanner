@@ -264,3 +264,37 @@ def test_settings_put_rejects_invalid_type(tmp_path):
 
     resp = client.put("/api/settings", json={"eps_growth_min": "not-a-number"})
     assert resp.status_code == 400
+
+
+def test_admin_run_scan_requires_token(tmp_path, monkeypatch):
+    client, engine = _build_bare_client(tmp_path)
+    from app.config import seed_defaults
+    seed_defaults(engine)
+    monkeypatch.setenv("ADMIN_TOKEN", "secret123")
+
+    resp = client.get("/api/admin/run-scan", params={"token": "wrong"})
+    assert resp.status_code == 403
+
+
+def test_admin_run_scan_403_when_no_token_configured(tmp_path, monkeypatch):
+    client, engine = _build_bare_client(tmp_path)
+    from app.config import seed_defaults
+    seed_defaults(engine)
+    monkeypatch.delenv("ADMIN_TOKEN", raising=False)
+
+    resp = client.get("/api/admin/run-scan", params={"token": "anything"})
+    assert resp.status_code == 403
+
+
+def test_admin_run_scan_triggers_run_nightly(tmp_path, monkeypatch):
+    client, engine = _build_bare_client(tmp_path)
+    from app.config import seed_defaults
+    seed_defaults(engine)
+    monkeypatch.setenv("ADMIN_TOKEN", "secret123")
+
+    calls = []
+    monkeypatch.setattr("pipeline.run_nightly.run", lambda eng: calls.append(eng))
+
+    resp = client.get("/api/admin/run-scan", params={"token": "secret123"})
+    assert resp.status_code == 200
+    assert calls == [engine]
