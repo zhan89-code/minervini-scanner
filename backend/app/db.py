@@ -6,7 +6,7 @@ a migration step -- Phase 1 code only reads/writes a subset of the columns.
 import os
 from pathlib import Path
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 
 # SCANNER_DB_PATH lets a deployment point the DB file at a mounted
@@ -91,6 +91,24 @@ CREATE TABLE IF NOT EXISTS scan_meta (
 
 def get_engine(db_path: Path = DB_PATH) -> Engine:
     engine = create_engine(f"sqlite:///{db_path}")
+
+    # pysqlite's own implicit transaction handling can leave a pooled
+    # connection holding a stale read snapshot from before another process's
+    # write -- e.g. the API server never seeing a scan that a separate
+    # `python -m pipeline.run_nightly` process just committed. This is
+    # SQLAlchemy's documented workaround: disable pysqlite's own transaction
+    # management and let SQLAlchemy's engine.begin()/connect() drive BEGIN
+    # explicitly, so plain reads run in true autocommit (always current) and
+    # explicit transactions still work correctly.
+    # https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
+    @event.listens_for(engine, "connect")
+    def _do_connect(dbapi_connection, connection_record):
+        dbapi_connection.isolation_level = None
+
+    @event.listens_for(engine, "begin")
+    def _do_begin(conn):
+        conn.exec_driver_sql("BEGIN")
+
     with engine.begin() as conn:
         for stmt in SCHEMA.strip().split(";"):
             stmt = stmt.strip()
