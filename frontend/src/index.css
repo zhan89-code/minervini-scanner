@@ -1,0 +1,120 @@
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #1c2129;
+  --surface-hover: #1f2530;
+  --border: #30363d;
+  --border-strong: #3d444d;
+
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+
+  --accent: #58a6ff;
+  --accent-bg: rgba(88, 166, 255, 0.12);
+
+  --success: #3fb950;
+  --success-bg: rgba(63, 185, 80, 0.14);
+  --danger: #f85149;
+  --danger-bg: rgba(248, 81, 73, 0.14);
+  --warning: #d29922;
+  --warning-bg: rgba(210, 153, 34, 0.14);
+
+  --sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  font: 15px/1.5 var(--sans);
+  color-scheme: dark;
+  color: var(--text-primary);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  font-family: var(--sans);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+h2 {
+  font-size: 20px;
+  margin: 0 0 4px;
+}
+
+h3 {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin: 32px 0 12px;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font: inherit;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+
+input {
+  font: inherit;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 13px;
+}

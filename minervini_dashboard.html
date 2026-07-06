@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Minervini Trend Template Dashboard</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2e; --panel2:#1c2438; --border:#2a3450;
+    --text:#e8ecf6; --muted:#8b93ab; --green:#3ecf8e; --red:#ef5a6f;
+    --amber:#f0b23c; --blue:#5b9df5; --pass-bg:rgba(62,207,142,0.12);
+    --fail-bg:rgba(239,90,111,0.12);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg); color:var(--text); padding:24px 32px 60px;
+  }
+  h1{font-size:22px; margin:0 0 4px;}
+  .subtitle{color:var(--muted); font-size:13px; margin-bottom:18px;}
+  .disclaimer{
+    background:var(--panel2); border:1px solid var(--border); border-left:3px solid var(--amber);
+    padding:10px 14px; border-radius:6px; font-size:12.5px; color:var(--muted); margin-bottom:22px;
+  }
+  .summary{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:26px;}
+  .stat{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:14px 20px; min-width:120px; text-align:center;
+  }
+  .stat .num{font-size:26px; font-weight:700;}
+  .stat .lbl{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+  .stat.green .num{color:var(--green);}
+  .stat.amber .num{color:var(--amber);}
+  .stat.red .num{color:var(--red);}
+
+  table{width:100%; border-collapse:collapse; background:var(--panel); border-radius:10px; overflow:hidden; margin-bottom:34px;}
+  th,td{padding:10px 12px; text-align:left; font-size:13px; border-bottom:1px solid var(--border);}
+  th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; cursor:pointer; user-select:none;}
+  th:hover{color:var(--text);}
+  tbody tr{cursor:pointer; transition:background .15s;}
+  tbody tr:hover{background:var(--panel2);}
+  tbody tr:last-child td{border-bottom:none;}
+  .badge{
+    display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700;
+  }
+  .badge.p8{background:var(--pass-bg); color:var(--green);}
+  .badge.p7{background:rgba(240,178,60,0.15); color:var(--amber);}
+  .badge.pmid{background:rgba(91,157,245,0.12); color:var(--blue);}
+  .badge.plow{background:var(--fail-bg); color:var(--red);}
+  .verdict-tag{font-size:11.5px; font-weight:600; padding:3px 8px; border-radius:5px;}
+  .verdict-candidate{background:var(--pass-bg); color:var(--green);}
+  .verdict-watch{background:rgba(240,178,60,0.15); color:var(--amber);}
+  .verdict-avoid{background:var(--fail-bg); color:var(--red);}
+  .verdict-none{background:rgba(139,147,171,0.12); color:var(--muted);}
+  .pp{font-weight:600;}
+  .pp.pos{color:var(--green);} .pp.neg{color:var(--red);}
+
+  .cards{display:flex; flex-direction:column; gap:16px;}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px 22px;
+  }
+  .card-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;}
+  .card-head .left{display:flex; align-items:center; gap:12px;}
+  .card-head .sym{font-size:19px; font-weight:800;}
+  .card-head .price{font-size:15px; color:var(--muted);}
+  .crit-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:6px; margin:14px 0;}
+  .crit{
+    display:flex; gap:8px; align-items:flex-start; padding:7px 9px; border-radius:6px; font-size:12px;
+  }
+  .crit.pass{background:var(--pass-bg);} .crit.fail{background:var(--fail-bg);}
+  .crit .dot{font-weight:800; flex-shrink:0;}
+  .crit.pass .dot{color:var(--green);} .crit.fail .dot{color:var(--red);}
+  .crit .txt b{display:block; font-size:11.5px;}
+  .crit .txt span{color:var(--muted); font-size:11px;}
+
+  .range-wrap{margin:16px 0 18px;}
+  .range-lbl{display:flex; justify-content:space-between; font-size:10.5px; color:var(--muted); margin-bottom:3px;}
+  svg.rangebar{width:100%; height:34px; display:block;}
+
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:6px;}
+  @media (max-width:820px){.two-col{grid-template-columns:1fr;}}
+  .case h4{margin:0 0 6px; font-size:12.5px; text-transform:uppercase; letter-spacing:.03em;}
+  .case.bull h4{color:var(--green);} .case.bear h4{color:var(--red);}
+  .case ul{margin:0; padding-left:18px; font-size:13px; line-height:1.55;}
+  .case ul li{margin-bottom:5px;}
+
+  .meta-row{display:flex; gap:22px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); font-size:12.5px;}
+  .meta-row .m-lbl{color:var(--muted); font-size:10.5px; text-transform:uppercase; display:block; margin-bottom:2px;}
+  .earnings-flag{color:var(--amber); font-weight:600;}
+  .risk-box{
+    margin-top:12px; background:var(--panel2); border:1px solid var(--border); border-radius:8px;
+    padding:10px 14px; font-size:12.5px; line-height:1.5;
+  }
+  .risk-box .m-lbl{color:var(--blue);}
+
+  footer{margin-top:30px; font-size:11.5px; color:var(--muted); border-top:1px solid var(--border); padding-top:14px;}
+</style>
+</head>
+<body>
+
+<h1>Minervini Trend Template Dashboard</h1>
+<div class="subtitle" id="genDate"></div>
+
+<div class="disclaimer">
+  This is a snapshot from a technical screen (Mark Minervini's 8-point Trend Template) plus a manual news/catalyst
+  read-through done on the scan date — it does not auto-refresh. This applies one trader's discretionary methodology
+  and is not financial advice, a guarantee of performance, or a recommendation to trade. Fundamentals here are
+  qualitative headlines, not the full earnings/margin screen from the SEPA methodology.
+</div>
+
+<div class="summary" id="summary"></div>
+
+<table id="scanTable">
+  <thead>
+    <tr>
+      <th data-key="symbol">Symbol</th>
+      <th data-key="pass_count">Trend Template</th>
+      <th data-key="verdict">Verdict</th>
+      <th data-key="close">Price</th>
+      <th data-key="fromHigh">% from 52w High</th>
+      <th data-key="fromLow">% from 52w Low</th>
+      <th data-key="rsPP">RS vs SPY (6mo)</th>
+      <th data-key="earningsDate">Next Earnings</th>
+    </tr>
+  </thead>
+  <tbody id="scanBody"></tbody>
+</table>
+
+<div class="cards" id="cards"></div>
+
+<footer>
+  Generated from a 10-ticker test watchlist (AAPL, MSFT, NVDA, AVGO, GOOGL, AMZN, META, CRWD, PLTR, ANET) scanned
+  against Minervini's 8-point Trend Template using daily adjusted price data. RS proxy = trailing 6-month return vs.
+  SPY, not the official IBD Relative Strength Rating. Click a table row to jump to that stock's detail card.
+</footer>
+
+<script>
+const TODAY = "2026-07-05";
+
+const DATA = [
+{
+  symbol:"AAPL", close:308.63, sma50:293.46, sma150:273.90, sma200:270.32, lo52:201.58, hi52:315.20,
+  pass_count:8, rsPP:3.9, verdict:"Stage 2 Candidate", verdictClass:"candidate",
+  earningsDate:"2026-07-31", earningsFlag:false,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:true, detail:"308.63 > 273.90 and 270.32"},
+    {label:"2. SMA150 > SMA200", pass:true, detail:"273.90 > 270.32"},
+    {label:"3. SMA200 rising 1mo+", pass:true, detail:"200-day MA trending up"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:true, detail:"293.46 > 273.90 and 270.32"},
+    {label:"5. Price > SMA50", pass:true, detail:"308.63 > 293.46"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:true, detail:"308.63 ≥ 262.05 (1.3 × 201.58)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:true, detail:"308.63 ≥ 236.40 (0.75 × 315.20)"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:true, detail:"+3.9 percentage points vs SPY"},
+  ],
+  bull:[
+    "Clean sweep — all 8 Trend Template criteria pass; textbook stage-2 structure.",
+    "Within 2% of its 52-week high, RS positive vs. the market.",
+    "Apple Intelligence / Siri AI upgrades plus a Google partnership are cited as driving a strong iPhone 17 upgrade cycle.",
+    "Reports of 5 new iPhone models incl. a $2,500 foldable — a longer-term revenue catalyst (mostly FY2027)."
+  ],
+  bear:[
+    "Trades near ~37x earnings — a premium that already assumes the upgrade cycle plays out.",
+    "Q3 FY26 earnings due July 30–31: Tim Cook's last call as CEO before John Ternus takes over — leadership-transition uncertainty layered onto a binary print.",
+    "Foldable revenue mostly lands in fiscal 2027, not this quarter — don't pay up today for a story that's a year out."
+  ],
+  catalyst:"Q3 FY26 earnings ~July 30–31; Apple Intelligence/Siri rollout and iPhone 17 cycle are the active narrative.",
+  risk:"Near the 52w high with a clean trend — a breakout add could use a stop below the 50-day MA (~293, ~5% risk) or below the most recent base low. Earnings land in the next few weeks: Minervini's discipline says avoid sizing up right before a print you can't control."
+},
+{
+  symbol:"GOOGL", close:359.91, sma50:370.83, sma150:333.34, sma200:315.81, lo52:173.86, hi52:402.38,
+  pass_count:7, rsPP:5.3, verdict:"Watch", verdictClass:"watch",
+  earningsDate:"2026-07-24", earningsFlag:true,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:true, detail:"359.91 > 333.34 and 315.81"},
+    {label:"2. SMA150 > SMA200", pass:true, detail:"333.34 > 315.81"},
+    {label:"3. SMA200 rising 1mo+", pass:true, detail:"200-day MA trending up"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:true, detail:"370.83 > 333.34 and 315.81"},
+    {label:"5. Price > SMA50", pass:false, detail:"359.91 < 370.83 — pulled back below the 50-day MA"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:true, detail:"359.91 ≥ 226.02 (1.3 × 173.86)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:true, detail:"359.91 ≥ 301.79 (0.75 × 402.38)"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:true, detail:"+5.3 percentage points vs SPY"},
+  ],
+  bull:[
+    "7 of 8 — longer-term trend structure (150/200MA stack, rising 200MA) is intact.",
+    "Google Cloud revenue +63% YoY with a ~$460B backlog; new enterprise wins (HSBC and others).",
+    "Berkshire Hathaway took a $10B anchor stake in Alphabet's recent equity raise — a notable institutional confidence signal.",
+    "Recently joined the Dow Jones Industrial Average."
+  ],
+  bear:[
+    "Fails criterion 5 — price sits ~3% below its 50-day MA, the one line item keeping this off the candidate list.",
+    "Down ~11% over the past month on capex-driven margin worries: 2026 capex guidance raised to ~$190B, pulling free cash flow margin from 21% down to ~9.2%.",
+    "Q2 earnings land in under three weeks (~July 22–24) — a confirmed 50MA reclaim hasn't happened yet, so a new entry now is a bet on the print, not on a resolved trend."
+  ],
+  catalyst:"Q2 2026 earnings ~July 22–24 — market wants proof AI capex is converting to Search/Cloud/Gemini growth.",
+  risk:"Not a clean entry today. Wait for a reclaim of the 50-day MA on above-average volume before treating this as a Trend Template pass — and note earnings land before that reclaim would likely even be confirmed."
+},
+{
+  symbol:"ANET", close:159.99, sma50:159.80, sma150:143.02, sma200:143.12, lo52:101.13, hi52:177.73,
+  pass_count:7, rsPP:12.3, verdict:"Watch", verdictClass:"watch",
+  earningsDate:"2026-08-05", earningsFlag:false,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:true, detail:"159.99 > 143.02 and 143.12"},
+    {label:"2. SMA150 > SMA200", pass:false, detail:"143.02 < 143.12 — a hair's-width fail"},
+    {label:"3. SMA200 rising 1mo+", pass:true, detail:"200-day MA trending up"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:true, detail:"159.80 > 143.02 and 143.12"},
+    {label:"5. Price > SMA50", pass:true, detail:"159.99 > 159.80"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:true, detail:"159.99 ≥ 131.47 (1.3 × 101.13)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:true, detail:"159.99 ≥ 133.30 (0.75 × 177.73)"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:true, detail:"+12.3 percentage points vs SPY"},
+  ],
+  bull:[
+    "7 of 8 — strong relative strength (+12.3pp vs SPY), only one criterion away from a full pass.",
+    "AI-networking demand and the 1.6-terabit switch platform rollout are the core growth story.",
+    "Up ~56% over the past year on hyperscale AI-infrastructure spend."
+  ],
+  bear:[
+    "Fails criterion 2 by a hair — the 150-day MA (143.02) sits just below the 200-day MA (143.12); worth rechecking in the next few sessions rather than treating as a confirmed fail.",
+    "Down ~5% on July 2; recent insider stock sales disclosed in filings are weighing on sentiment.",
+    "Wafer-fab and advanced switch-silicon shortages are capping near-term shipment capacity and margin.",
+    "Rich valuation — forward P/E ~47, PEG ~2.35 vs. the group."
+  ],
+  catalyst:"Q2 earnings ~early August; hyperscaler order commentary and AI networking commitments are the swing factor.",
+  risk:"Effectively one technical line item from a full pass. If the 150MA crosses back above the 200MA and price holds, treat it like a fresh Trend Template pass — but size smaller given the insider-selling headline and supply-constraint overhang."
+},
+{
+  symbol:"CRWD", close:193.98, sma50:155.16, sma150:125.09, sma200:125.64, lo52:87.56, hi52:195.54,
+  pass_count:7, rsPP:55.7, verdict:"Watch", verdictClass:"watch",
+  earningsDate:"2026-09-02", earningsFlag:false,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:true, detail:"193.98 > 125.09 and 125.64"},
+    {label:"2. SMA150 > SMA200", pass:false, detail:"125.09 < 125.64 — a hair's-width fail"},
+    {label:"3. SMA200 rising 1mo+", pass:true, detail:"200-day MA trending up"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:true, detail:"155.16 > 125.09 and 125.64"},
+    {label:"5. Price > SMA50", pass:true, detail:"193.98 > 155.16"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:true, detail:"193.98 ≥ 113.83 (1.3 × 87.56)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:true, detail:"193.98 ≥ 146.66 (0.75 × 195.54)"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:true, detail:"+55.7 percentage points vs SPY — strongest RS in this watchlist"},
+  ],
+  bull:[
+    "By far the strongest relative strength in the group (+55.7pp vs SPY over 6 months); within 1% of its 52-week high.",
+    "Completed a 4-for-1 stock split on July 2 (price history here is already split-adjusted) — often a bullish sentiment/liquidity signal even though it's mechanically neutral.",
+    "Wells Fargo raised its price target from $500 to $900 (pre-split terms) on June 29.",
+    "Enterprise security spending projected to grow ~13% to ~$240B in 2026, an AI-driven tailwind for the sector."
+  ],
+  bear:[
+    "Fails criterion 2 by a hair, same technical near-miss as ANET (150MA 125.09 vs 200MA 125.64).",
+    "Valuation is stretched — P/S ~38.7x vs. a software industry average near 3.5x; some analysts already call it fully priced after a 439% run.",
+  ],
+  catalyst:"No earnings until Sep 2 — less near-term binary risk than most names on this list right now.",
+  risk:"Same setup as ANET: one line item from a clean pass. Given the valuation, use a tighter stop and smaller position size if entering on a breakout above recent highs; the long runway to earnings is a plus for avoiding event risk."
+},
+{
+  symbol:"AMZN", close:242.67, sma50:255.42, sma150:234.76, sma200:232.98, lo52:198.79, hi52:274.99,
+  pass_count:5, rsPP:-4.7, verdict:"Not a Candidate", verdictClass:"none",
+  earningsDate:"2026-07-31", earningsFlag:false,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:true, detail:"242.67 > 234.76 and 232.98"},
+    {label:"2. SMA150 > SMA200", pass:true, detail:"234.76 > 232.98"},
+    {label:"3. SMA200 rising 1mo+", pass:true, detail:"200-day MA trending up"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:true, detail:"255.42 > 234.76 and 232.98"},
+    {label:"5. Price > SMA50", pass:false, detail:"242.67 < 255.42"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:false, detail:"242.67 < 258.43 (1.3 × 198.79)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:true, detail:"242.67 ≥ 206.24 (0.75 × 274.99)"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:false, detail:"-4.7 percentage points vs SPY"},
+  ],
+  bull:[
+    "Longer-term trend base (150/200MA stack, rising 200MA) is still intact.",
+    "AWS AI infrastructure story is strong: Trainium + Graviton run-rate now over $20B annualized.",
+    "A 20% AWS GPU price hike effective July 1 is read as a sign AI demand supports real pricing power.",
+    "Prime Day lifted U.S. online retail sales ~9.3% YoY."
+  ],
+  bear:[
+    "Below its 50-day MA and hasn't cleared 30% above its 52-week low — momentum has stalled (5 of 8, RS negative at -4.7pp).",
+    "Free cash flow collapsed ~95% YoY to $1.2B against $131.8B of capex — a real fundamental strain, not just sentiment.",
+    "Multiple trackers call the near-term setup 'sideways' pending the next print."
+  ],
+  catalyst:"Q2 earnings July 31 — AWS pricing power and whether the capex-to-growth payoff shows up are the key questions.",
+  risk:"Not a Trend Template candidate today — no new entry. Worth re-screening after earnings if it reclaims the 50-day MA and the 30%-above-52w-low level."
+},
+{
+  symbol:"NVDA", close:194.83, sma50:209.65, sma150:192.32, sma200:190.82, lo52:157.04, hi52:235.47,
+  pass_count:5, rsPP:-5.2, verdict:"Not a Candidate", verdictClass:"none",
+  earningsDate:"2026-08-27", earningsFlag:false,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:true, detail:"194.83 > 192.32 and 190.82"},
+    {label:"2. SMA150 > SMA200", pass:true, detail:"192.32 > 190.82"},
+    {label:"3. SMA200 rising 1mo+", pass:true, detail:"200-day MA trending up"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:true, detail:"209.65 > 192.32 and 190.82"},
+    {label:"5. Price > SMA50", pass:false, detail:"194.83 < 209.65"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:false, detail:"194.83 < 204.15 (1.3 × 157.04)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:true, detail:"194.83 ≥ 176.60 (0.75 × 235.47)"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:false, detail:"-5.2 percentage points vs SPY"},
+  ],
+  bull:[
+    "Longer-term uptrend structure still intact (150>200MA, 200MA rising).",
+    "Data Center revenue +92% YoY, net income +211% YoY in the latest quarter — fundamentals remain very strong.",
+    "Analyst consensus is 'Strong Buy' with a 12-month target implying meaningful upside.",
+    "Multiple 2026 catalysts flagged: Vera Rubin/agentic AI execution, robotics, sovereign AI, China market access."
+  ],
+  bear:[
+    "Below its 50-day MA and hasn't cleared 30% above its 52-week low (5 of 8, RS -5.2pp) — press coverage calls this a 'summer swoon.'",
+    "No catalyst flagged within the next few weeks; next earnings isn't until Aug 27, well out."
+  ],
+  catalyst:"No near-term catalyst identified; trading sideways per multiple trackers heading into the Aug 27 print.",
+  risk:"Not a current candidate. Watch for a reclaim of the 50-day MA on volume as the re-entry trigger, particularly as the Aug 27 earnings date approaches."
+},
+{
+  symbol:"AVGO", close:360.45, sma50:408.89, sma150:364.79, sma200:360.20, lo52:267.94, hi52:480.81,
+  pass_count:4, rsPP:-5.3, verdict:"Not a Candidate", verdictClass:"none",
+  earningsDate:"2026-09-04", earningsFlag:false,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:false, detail:"360.45 < 364.79 (SMA150)"},
+    {label:"2. SMA150 > SMA200", pass:true, detail:"364.79 > 360.20"},
+    {label:"3. SMA200 rising 1mo+", pass:true, detail:"200-day MA trending up"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:true, detail:"408.89 > 364.79 and 360.20"},
+    {label:"5. Price > SMA50", pass:false, detail:"360.45 < 408.89"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:true, detail:"360.45 ≥ 348.32 (1.3 × 267.94)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:false, detail:"360.45 < 360.61 (0.75 × 480.81) — fails by $0.16"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:false, detail:"-5.3 percentage points vs SPY"},
+  ],
+  bull:[
+    "Q2 revenue +48% YoY, AI semiconductor revenue more than doubled to $10.8B.",
+    "Tomahawk 6 data-center push extends its AI-networking silicon franchise.",
+    "48 analysts rate it 'Strong Buy'; some frame the recent pullback as a buying opportunity ahead of guided 200%+ AI-semi growth."
+  ],
+  bear:[
+    "Only 4 of 8 — below its 50-day AND 150-day MA, and misses the 25%-from-52w-high line by just $0.16 (criterion 7).",
+    "Down ~15% over the past month in a broader tech sell-off; stock has 'gone almost nowhere' in 2026, lagging the semiconductor sector badly.",
+    "RS is negative vs. SPY (-5.3pp)."
+  ],
+  catalyst:"No earnings until early September — the 'bull thesis hasn't shown up in the stock yet' argument has a while to prove out or fail.",
+  risk:"Not a Trend Template candidate. It's close on criterion 7 (within $0.16) — worth a quick recheck, but needs to reclaim both the 50- and 150-day MAs before it's back on the radar."
+},
+{
+  symbol:"MSFT", close:390.49, sma50:407.22, sma150:422.08, sma200:443.78, lo52:352.83, hi52:538.66,
+  pass_count:0, rsPP:-28.7, verdict:"Avoid", verdictClass:"avoid",
+  earningsDate:"2026-07-30", earningsFlag:true,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:false, detail:"390.49 < 422.08 and 443.78"},
+    {label:"2. SMA150 > SMA200", pass:false, detail:"422.08 < 443.78"},
+    {label:"3. SMA200 rising 1mo+", pass:false, detail:"200-day MA not confirmed rising"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:false, detail:"407.22 < 422.08 and 443.78"},
+    {label:"5. Price > SMA50", pass:false, detail:"390.49 < 407.22"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:false, detail:"390.49 < 458.68 (1.3 × 352.83)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:false, detail:"390.49 < 403.99 (0.75 × 538.66)"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:false, detail:"-28.7 percentage points vs SPY — weakest RS in the group"},
+  ],
+  bull:[
+    "Popped ~4% on July 1 after Haleon signed a 5-year deal for Microsoft 365 Copilot and Azure.",
+    "Azure is now the primary cloud provider for 55% of surveyed U.S. CIOs, up from 45% in December 2025.",
+    "35 of 36 analysts rate it Buy, with an average target implying ~38% upside from current levels.",
+    "FQ4 2026 earnings (~July 28–30) could be a turning point if Azure growth holds near the guided 39–40%."
+  ],
+  bear:[
+    "0 of 8 — in a confirmed downtrend: price sits below all three key moving averages, which are stacked bearishly (50 < 150 < 200).",
+    "Down ~20.5% year-to-date; RS is the weakest in this entire watchlist (-28.7pp vs SPY).",
+    "The improving headlines haven't yet shown up in the chart — a classic 'good news, broken trend' situation."
+  ],
+  catalyst:"FQ4 2026 earnings ~July 28–30 — Azure growth and free-cash-flow trend are the real test.",
+  risk:"Stage 3/4 by the Trend Template — not a SEPA candidate today regardless of the improving narrative. Wait for actual trend repair (reclaiming the 50-day MA, then 150/200-day) rather than acting on headlines alone."
+},
+{
+  symbol:"META", close:582.90, sma50:604.81, sma150:629.61, sma200:645.41, lo52:525.23, hi52:787.42,
+  pass_count:0, rsPP:-21.3, verdict:"Avoid", verdictClass:"avoid",
+  earningsDate:"2026-07-30", earningsFlag:true,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:false, detail:"582.90 < 629.61 and 645.41"},
+    {label:"2. SMA150 > SMA200", pass:false, detail:"629.61 < 645.41"},
+    {label:"3. SMA200 rising 1mo+", pass:false, detail:"200-day MA not confirmed rising"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:false, detail:"604.81 < 629.61 and 645.41"},
+    {label:"5. Price > SMA50", pass:false, detail:"582.90 < 604.81"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:false, detail:"582.90 < 682.80 (1.3 × 525.23)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:false, detail:"582.90 < 590.57 (0.75 × 787.42)"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:false, detail:"-21.3 percentage points vs SPY"},
+  ],
+  bull:[
+    "Exploring a new business line renting excess AI compute capacity to external customers — shares jumped ~10% on that report.",
+    "Remains one of the largest AI infrastructure spenders, positioning for long-term scale."
+  ],
+  bear:[
+    "0 of 8 — clear downtrend, RS -21.3pp vs SPY, one of the weaker charts in the group.",
+    "CEO Zuckerberg said AI-agent progress has been 'slower than expected' despite heavy spend — shares fell ~4–5% on July 2 on that comment.",
+    "Q2 earnings ~July 28–30 adds near-term event risk to an already broken chart."
+  ],
+  catalyst:"Mixed: potential new AI-compute-rental business vs. disappointing AI-agent progress commentary; earnings ~July 30.",
+  risk:"Stage 3/4 — under SEPA rules this is an avoid/no-new-entry name until the trend actually repairs, regardless of the compute-rental headline."
+},
+{
+  symbol:"PLTR", close:129.30, sma50:134.58, sma150:150.50, sma200:157.91, lo52:107.27, hi52:207.18,
+  pass_count:0, rsPP:-37.1, verdict:"Avoid", verdictClass:"avoid",
+  earningsDate:"2026-08-04", earningsFlag:false,
+  criteria:[
+    {label:"1. Price > SMA150 & SMA200", pass:false, detail:"129.30 < 150.50 and 157.91"},
+    {label:"2. SMA150 > SMA200", pass:false, detail:"150.50 < 157.91"},
+    {label:"3. SMA200 rising 1mo+", pass:false, detail:"200-day MA not confirmed rising"},
+    {label:"4. SMA50 > SMA150 & SMA200", pass:false, detail:"134.58 < 150.50 and 157.91"},
+    {label:"5. Price > SMA50", pass:false, detail:"129.30 < 134.58"},
+    {label:"6. Price ≥ 1.30x 52w low", pass:false, detail:"129.30 < 139.45 (1.3 × 107.27)"},
+    {label:"7. Price ≥ 0.75x 52w high", pass:false, detail:"129.30 < 155.39 (0.75 × 207.18)"},
+    {label:"8. RS vs SPY (6mo) > 0", pass:false, detail:"-37.1 percentage points vs SPY — weakest RS on this list"},
+  ],
+  bull:[
+    "Underlying business remains very strong: Q1 revenue +85% YoY, U.S. revenue +104% YoY.",
+    "New NVIDIA sovereign-AI partnership announced June 29 (AIP/Ontology/Foundry/Apollo combined with NVIDIA's platform).",
+    "DA Davidson upgraded to Buy with a $175 target on the back of that news.",
+    "Bounced ~22% off its June 25 low of $106.37."
+  ],
+  bear:[
+    "0 of 8 — down ~40% in 2026 from a $207.52 52-week high; RS is the weakest in this entire watchlist (-37.1pp).",
+    "Decline is attributed mainly to valuation concerns, not business weakness — the stock needs to stay a very high-growth, very high-margin company for years to justify even the post-crash valuation.",
+    "UK NHS Federated Data Platform contract role is under renewed scrutiny, a company-specific overhang."
+  ],
+  catalyst:"NVIDIA sovereign-AI tie-up and DA Davidson upgrade are the recent positives; next earnings ~Aug 4.",
+  risk:"Classic 'great story, broken chart' — Stage 3/4 technically despite strong fundamentals. SEPA discipline says wait for the Trend Template to actually turn before treating this as a candidate, not for headlines alone."
+},
+];
+
+function fromHigh(d){ return (d.close/d.hi52 - 1) * 100; }
+function fromLow(d){ return (d.close/d.lo52 - 1) * 100; }
+
+function badgeClass(pc){
+  if(pc===8) return "p8";
+  if(pc===7) return "p7";
+  if(pc>=5) return "pmid";
+  return "plow";
+}
+
+function fmtPct(v){
+  const sign = v>=0 ? "+" : "";
+  return sign + v.toFixed(1) + "%";
+}
+
+function daysUntil(dateStr){
+  const d = new Date(dateStr + "T00:00:00");
+  const t = new Date(TODAY + "T00:00:00");
+  return Math.round((d-t)/(1000*60*60*24));
+}
+
+function renderSummary(){
+  const total = DATA.length;
+  const p8 = DATA.filter(d=>d.pass_count===8).length;
+  const p7 = DATA.filter(d=>d.pass_count===7).length;
+  const p0 = DATA.filter(d=>d.pass_count===0).length;
+  const stats = [
+    {num:total, lbl:"Scanned", cls:""},
+    {num:p8, lbl:"8/8 Pass", cls:"green"},
+    {num:p7, lbl:"7/8 (Watch)", cls:"amber"},
+    {num:p0, lbl:"0/8 (Avoid)", cls:"red"},
+  ];
+  document.getElementById("summary").innerHTML = stats.map(s=>
+    `<div class="stat ${s.cls}"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`
+  ).join("");
+}
+
+let sortKey = "pass_count", sortDir = -1;
+
+function sortedData(){
+  const arr = [...DATA];
+  arr.sort((a,b)=>{
+    let av, bv;
+    if(sortKey==="fromHigh"){ av=fromHigh(a); bv=fromHigh(b); }
+    else if(sortKey==="fromLow"){ av=fromLow(a); bv=fromLow(b); }
+    else { av=a[sortKey]; bv=b[sortKey]; }
+    if(typeof av === "string") return sortDir * av.localeCompare(bv);
+    return sortDir * (av - bv);
+  });
+  return arr;
+}
+
+function renderTable(){
+  const rows = sortedData().map(d=>{
+    const fh = fromHigh(d), fl = fromLow(d);
+    const days = daysUntil(d.earningsDate);
+    return `<tr onclick="document.getElementById('card-${d.symbol}').scrollIntoView({behavior:'smooth',block:'start'})">
+      <td><b>${d.symbol}</b></td>
+      <td><span class="badge ${badgeClass(d.pass_count)}">${d.pass_count} / 8</span></td>
+      <td><span class="verdict-tag verdict-${d.verdictClass==='candidate'?'candidate':d.verdictClass==='watch'?'watch':d.verdictClass==='avoid'?'avoid':'none'}">${d.verdict}</span></td>
+      <td>$${d.close.toFixed(2)}</td>
+      <td>${fh.toFixed(1)}%</td>
+      <td>${fmtPct(fl)}</td>
+      <td class="pp ${d.rsPP>=0?'pos':'neg'}">${fmtPct(d.rsPP)}</td>
+      <td>${d.earningsDate} <span style="color:var(--muted)">(${days}d)</span>${d.earningsFlag?' <span class="earnings-flag">⚠</span>':''}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("scanBody").innerHTML = rows;
+}
+
+function rangeBarSVG(d){
+  const w = 600, h = 34, pad = 4;
+  const lo = d.lo52, hi = d.hi52;
+  const span = hi - lo;
+  const x = v => pad + ((v-lo)/span) * (w - 2*pad);
+  const markers = [
+    {v:d.sma200, color:"#8b93ab", label:"200"},
+    {v:d.sma150, color:"#5b9df5", label:"150"},
+    {v:d.sma50, color:"#f0b23c", label:"50"},
+  ];
+  let marks = markers.map(m=>{
+    const mx = x(m.v);
+    return `<line x1="${mx}" y1="6" x2="${mx}" y2="28" stroke="${m.color}" stroke-width="2"/>
+            <text x="${mx}" y="6" fill="${m.color}" font-size="8" text-anchor="middle">${m.label}</text>`;
+  }).join("");
+  const px = x(d.close);
+  return `<svg class="rangebar" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <line x1="${pad}" y1="17" x2="${w-pad}" y2="17" stroke="#2a3450" stroke-width="4" stroke-linecap="round"/>
+    ${marks}
+    <circle cx="${px}" cy="17" r="6" fill="#e8ecf6" stroke="#0f1420" stroke-width="2"/>
+  </svg>`;
+}
+
+function renderCards(){
+  const html = sortedData().map(d=>{
+    const fh = fromHigh(d), fl = fromLow(d);
+    const days = daysUntil(d.earningsDate);
+    return `<div class="card" id="card-${d.symbol}">
+      <div class="card-head">
+        <div class="left">
+          <span class="sym">${d.symbol}</span>
+          <span class="price">$${d.close.toFixed(2)}</span>
+          <span class="badge ${badgeClass(d.pass_count)}">${d.pass_count} / 8</span>
+          <span class="verdict-tag verdict-${d.verdictClass}">${d.verdict}</span>
+        </div>
+        <div class="pp ${d.rsPP>=0?'pos':'neg'}">RS vs SPY (6mo): ${fmtPct(d.rsPP)}</div>
+      </div>
+
+      <div class="crit-grid">
+        ${d.criteria.map(c=>`
+          <div class="crit ${c.pass?'pass':'fail'}">
+            <span class="dot">${c.pass?'✓':'✕'}</span>
+            <span class="txt"><b>${c.label}</b><span>${c.detail}</span></span>
+          </div>`).join("")}
+      </div>
+
+      <div class="range-wrap">
+        <div class="range-lbl"><span>52w Low $${d.lo52.toFixed(2)}</span><span>52w High $${d.hi52.toFixed(2)}</span></div>
+        ${rangeBarSVG(d)}
+        <div class="range-lbl"><span>${fmtPct(fl)} above low</span><span>${fh.toFixed(1)}% from high</span></div>
+      </div>
+
+      <div class="two-col">
+        <div class="case bull">
+          <h4>Reasons to consider</h4>
+          <ul>${d.bull.map(x=>`<li>${x}</li>`).join("")}</ul>
+        </div>
+        <div class="case bear">
+          <h4>Reasons to avoid / caution</h4>
+          <ul>${d.bear.map(x=>`<li>${x}</li>`).join("")}</ul>
+        </div>
+      </div>
+
+      <div class="meta-row">
+        <div><span class="m-lbl">Catalyst / News</span>${d.catalyst}</div>
+        <div><span class="m-lbl">Next Earnings</span>${d.earningsDate} (${days} days)${d.earningsFlag?' <span class="earnings-flag">⚠ within ~3 weeks</span>':''}</div>
+      </div>
+
+      <div class="risk-box"><span class="m-lbl" style="display:block;margin-bottom:3px;">Risk framing</span>${d.risk}</div>
+    </div>`;
+  }).join("");
+  document.getElementById("cards").innerHTML = html;
+}
+
+document.querySelectorAll('#scanTable th').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.key;
+    if(sortKey===key){ sortDir *= -1; } else { sortKey = key; sortDir = -1; }
+    renderTable();
+  });
+});
+
+document.getElementById("genDate").textContent =
+  "Scan date: " + TODAY + "  ·  Universe: 10-ticker test watchlist  ·  Data: daily adjusted OHLCV via yfinance";
+
+renderSummary();
+renderTable();
+renderCards();
+</script>
+</body>
+</html>
