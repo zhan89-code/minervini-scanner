@@ -1,0 +1,39 @@
+name: Nightly Scan
+
+on:
+  schedule:
+    # 21:30 UTC, Mon-Fri -- after US market close. GitHub Actions cron has
+    # no per-repo timezone; this is UTC regardless of account settings.
+    - cron: "30 21 * * 1-5"
+  workflow_dispatch: {} # allows manually triggering a run from the Actions tab
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run nightly scan against the PythonAnywhere-hosted database
+        working-directory: backend
+        env:
+          PA_USERNAME: ${{ secrets.PA_USERNAME }}
+          PA_API_TOKEN: ${{ secrets.PA_API_TOKEN }}
+          PA_DB_PATH: /home/${{ secrets.PA_USERNAME }}/minervini-scanner/backend/scanner.db
+        run: python -m scripts.run_nightly_remote
+
+      - name: Reload the PythonAnywhere web app
+        env:
+          PA_USERNAME: ${{ secrets.PA_USERNAME }}
+          PA_API_TOKEN: ${{ secrets.PA_API_TOKEN }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Token ${PA_API_TOKEN}" \
+            "https://www.pythonanywhere.com/api/v0/user/${PA_USERNAME}/webapps/${PA_USERNAME}.pythonanywhere.com/reload/"
