@@ -298,3 +298,54 @@ def test_admin_run_scan_triggers_run_nightly(tmp_path, monkeypatch):
     resp = client.get("/api/admin/run-scan", params={"token": "secret123"})
     assert resp.status_code == 200
     assert calls == [engine]
+
+
+def test_trigger_scan_503_when_not_configured(tmp_path, monkeypatch):
+    client, _ = _build_bare_client(tmp_path)
+    monkeypatch.delenv("GITHUB_ACTIONS_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_REPO", raising=False)
+
+    resp = client.post("/api/admin/trigger-scan")
+    assert resp.status_code == 503
+
+
+def test_trigger_scan_calls_github_dispatch_api(tmp_path, monkeypatch):
+    client, _ = _build_bare_client(tmp_path)
+    monkeypatch.setenv("GITHUB_ACTIONS_TOKEN", "gh-token-123")
+    monkeypatch.setenv("GITHUB_REPO", "someuser/somerepo")
+
+    calls = []
+
+    class FakeResponse:
+        status_code = 204
+        text = ""
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        calls.append((url, headers, json))
+        return FakeResponse()
+
+    monkeypatch.setattr("api.main.requests.post", fake_post)
+
+    resp = client.post("/api/admin/trigger-scan")
+    assert resp.status_code == 200
+    assert resp.json() == {"triggered": True}
+    assert len(calls) == 1
+    url, headers, body = calls[0]
+    assert url == "https://api.github.com/repos/someuser/somerepo/actions/workflows/nightly-scan.yml/dispatches"
+    assert headers["Authorization"] == "Bearer gh-token-123"
+    assert body == {"ref": "main"}
+
+
+def test_trigger_scan_502_when_github_rejects(tmp_path, monkeypatch):
+    client, _ = _build_bare_client(tmp_path)
+    monkeypatch.setenv("GITHUB_ACTIONS_TOKEN", "gh-token-123")
+    monkeypatch.setenv("GITHUB_REPO", "someuser/somerepo")
+
+    class FakeResponse:
+        status_code = 401
+        text = "Bad credentials"
+
+    monkeypatch.setattr("api.main.requests.post", lambda *a, **k: FakeResponse())
+
+    resp = client.post("/api/admin/trigger-scan")
+    assert resp.status_code == 502

@@ -202,6 +202,15 @@ tbody tr:hover td {
   margin-bottom: 4px;
 }
 
+.scan-trigger-note {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.scan-trigger-error {
+  color: var(--danger);
+}
+
 /* stock detail header */
 
 .detail-header {

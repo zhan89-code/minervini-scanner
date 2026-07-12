@@ -12,7 +12,7 @@ import {
 } from "@tanstack/react-table";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { addToWatchlist, fetchMeta, fetchScan, fetchWatchlist, type ScanRow } from "../api";
+import { addToWatchlist, fetchMeta, fetchScan, fetchWatchlist, triggerScan, type ScanRow } from "../api";
 import Badge from "../components/Badge";
 
 const columnHelper = createColumnHelper<ScanRow>();
@@ -82,6 +82,9 @@ export default function ScanTable() {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "tt_pass_count", desc: true },
   ]);
+  const [scanTriggerState, setScanTriggerState] = useState<
+    "idle" | "triggering" | "triggered" | "error"
+  >("idle");
 
   const metaQuery = useQuery({ queryKey: ["meta"], queryFn: fetchMeta });
   const scanQuery = useQuery({ queryKey: ["scan"], queryFn: fetchScan });
@@ -93,6 +96,16 @@ export default function ScanTable() {
     e.stopPropagation();
     await addToWatchlist(symbol);
     queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+  };
+
+  const handleTriggerScan = async () => {
+    setScanTriggerState("triggering");
+    try {
+      await triggerScan();
+      setScanTriggerState("triggered");
+    } catch {
+      setScanTriggerState("error");
+    }
   };
 
   const table = useReactTable({
@@ -120,6 +133,25 @@ export default function ScanTable() {
             {metaQuery.data?.status ?? "—"}
           </Badge>
         </p>
+        <div>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={handleTriggerScan}
+            disabled={scanTriggerState === "triggering"}
+          >
+            {scanTriggerState === "triggering" ? "Starting scan…" : "Run Scan"}
+          </button>
+          {scanTriggerState === "triggered" && (
+            <span className="scan-trigger-note">
+              {" "}
+              Scan started — takes a few minutes, refresh later to see updates.
+            </span>
+          )}
+          {scanTriggerState === "error" && (
+            <span className="scan-trigger-note scan-trigger-error"> Failed to start scan.</span>
+          )}
+        </div>
       </div>
       <div className="table-card">
       <table>

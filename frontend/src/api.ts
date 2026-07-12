@@ -185,3 +185,16 @@ export async function updateSettings(
   }
   return res.json();
 }
+
+// Deployment addition: fires the GitHub Actions nightly-scan workflow
+// remotely instead of running the scan in-process (see api/main.py's
+// trigger_scan). Returns as soon as GitHub accepts the dispatch, not when
+// the scan itself finishes -- that runs in the background over the next
+// few minutes.
+export async function triggerScan(): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/admin/trigger-scan`, { method: "POST" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail ?? `POST /api/admin/trigger-scan failed: ${res.status}`);
+  }
+}

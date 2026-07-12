@@ -4,21 +4,31 @@ Fundamentals/RS (Phase 2), stage (Phase 3), VCP (Phase 4), and composite +
 watchlist + settings (Phase 5) are all computed/served now. Nothing is left
 emitting a permanently-null placeholder.
 
-Two ways the nightly scan can trigger without a manual command:
+Three ways the nightly scan can trigger:
 1. app.scheduler's in-process APScheduler -- works when this app is served
    by a real ASGI server (uvicorn on Railway/Fly.io/a VPS). Does NOT fire
    under the PythonAnywhere WSGI deployment (backend/wsgi.py never invokes
    the ASGI lifespan protocol at all).
-2. GET /api/admin/run-scan (below) -- a token-protected endpoint an
-   external free scheduler (e.g. cron-job.org) can hit on a schedule. This
-   is the mechanism that actually works on PythonAnywhere's free tier,
-   since both its Scheduled Tasks and Always-on Tasks features are paid-only.
+2. GET /api/admin/run-scan (below) -- a token-protected endpoint that runs
+   the scan synchronously, in-process. Fine for a handful of tickers; for
+   the full S&P 500 this reliably exceeds PythonAnywhere free tier's
+   web-request timeout (confirmed live: killed by their load balancer
+   before finishing). Kept for small manual test runs, not for daily use
+   with a large universe.
+3. POST /api/admin/trigger-scan (below) -- fires the GitHub Actions
+   workflow (.github/workflows/nightly-scan.yml) instead of running the
+   scan on PythonAnywhere at all. That workflow downloads the live
+   database via PythonAnywhere's Files API, does the actual compute on
+   GitHub's runner (no per-request timeout to worry about), uploads the
+   result back, and reloads the web app. This is what the dashboard's
+   "Run Scan" button calls, and what the daily schedule uses.
 """
 import json
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
+import requests
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -72,6 +82,38 @@ def run_scan(token: str = Query(...)):
     with engine.connect() as conn:
         row = conn.execute(text("SELECT last_run, status FROM scan_meta WHERE id = 1")).fetchone()
     return {"last_run": row[0] if row else None, "status": row[1] if row else "unknown"}
+
+
+@app.post("/api/admin/trigger-scan")
+def trigger_scan():
+    """Fires the GitHub Actions nightly-scan workflow instead of running
+    the scan in-process -- see module docstring. Deliberately unauthenticated
+    (unlike /api/admin/run-scan): the dashboard's "Run Scan" button calls
+    this directly with no login on the site, since the worst case of a
+    stranger triggering it is a wasted GitHub Actions run, not a data or
+    security risk. Returns immediately; the scan itself runs on GitHub's
+    side over the next few minutes, not within this request.
+    """
+    gh_token = os.environ.get("GITHUB_ACTIONS_TOKEN")
+    gh_repo = os.environ.get("GITHUB_REPO")  # e.g. "zhan89-code/minervini-scanner"
+    if not gh_token or not gh_repo:
+        raise HTTPException(status_code=503, detail="scan trigger not configured on this server")
+
+    resp = requests.post(
+        f"https://api.github.com/repos/{gh_repo}/actions/workflows/nightly-scan.yml/dispatches",
+        headers={
+            "Authorization": f"Bearer {gh_token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+        json={"ref": "main"},
+        timeout=15,
+    )
+    if resp.status_code != 204:
+        raise HTTPException(
+            status_code=502, detail=f"GitHub API returned {resp.status_code}: {resp.text[:200]}"
+        )
+    return {"triggered": True}
 
 
 @app.get("/api/meta")
